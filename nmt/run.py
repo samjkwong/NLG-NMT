@@ -31,7 +31,7 @@ Options:
     --patience=<int>                        wait for how many iterations to decay learning rate [default: 5]
     --max-num-trial=<int>                   terminate training after how many trials [default: 5]
     --lr-decay=<float>                      learning rate decay [default: 0.5]
-    --beam-size=<int>                       beam size [default: 5]
+    --beam-size=<int>                       beam size [default: 50]
     --sample-size=<int>                     sample size [default: 5]
     --lr=<float>                            learning rate [default: 0.001]
     --uniform-init=<float>                  uniformly initialize all parameters [default: 0.1]
@@ -58,6 +58,8 @@ from vocab import Vocab, VocabEntry
 
 import torch
 import torch.nn.utils
+
+import random
 
 
 def evaluate_ppl(model, dev_data, batch_size=32):
@@ -284,7 +286,7 @@ def decode(args: Dict[str, str]):
                              max_decoding_time_step=int(args['--max-decoding-time-step']))
 
     if args['TEST_TARGET_FILE']:
-        top_hypotheses = [hyps[0] for hyps in hypotheses]
+        top_hypotheses = [random.choice(hyps) for hyps in hypotheses]
         bleu_score = compute_corpus_level_bleu_score(test_data_tgt, top_hypotheses)
         print('Corpus BLEU: {}'.format(bleu_score * 100), file=sys.stderr)
 

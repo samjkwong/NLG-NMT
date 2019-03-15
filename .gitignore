@@ -1,2 +1,4 @@
-origin/master/nmt/model*
-origin/master/pytorch/LM-TFM-text8
+nmt/model.bin
+nmt/model.bin.optim
+nmt/model_0.bin
+nmt/model_0.bin.optim

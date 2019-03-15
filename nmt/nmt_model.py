@@ -15,6 +15,7 @@ import torch.nn as nn
 import torch.nn.utils
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
+import random
 
 from model_embeddings import ModelEmbeddings
 from char_decoder import CharDecoder
@@ -56,7 +57,6 @@ class NMT(nn.Module):
         self.combined_output_projection = nn.Linear(hidden_size * 2 + hidden_size, hidden_size, bias=False)        
         self.target_vocab_projection = nn.Linear(hidden_size, len(vocab.tgt), bias=False)
         self.dropout = nn.Dropout(self.dropout_rate)
-        self.softmax = torch.nn.Softmax()
 
         if not no_char_decoder:
            self.charDecoder = CharDecoder(hidden_size, target_vocab=vocab.tgt) 
@@ -291,7 +291,7 @@ class NMT(nn.Module):
         completed_hypotheses = []
 
         t = 0
-        while len(completed_hypotheses) < beam_size and t < max_decoding_time_step:
+        while len(completed_hypotheses) < beam_size:
             t += 1
             hyp_num = len(hypotheses)
 
@@ -324,7 +324,7 @@ class NMT(nn.Module):
 
             live_hyp_num = beam_size - len(completed_hypotheses)
             contiuating_hyp_scores = (hyp_scores.unsqueeze(1).expand_as(log_p_t) + log_p_t).view(-1)
-            contiuating_hyp_scores_prob = self.softmax(contiuating_hyp_scores)
+            contiuating_hyp_scores_prob = F.softmax(contiuating_hyp_scores)
             #contiuating_hyp_scores = (hyp_scores.unsqueeze(1).expand_as(p_t) + p_t).view(-1)
 
             #top_cand_hyp_scores, top_cand_hyp_pos = torch.topk(contiuating_hyp_scores, k=live_hyp_num)
@@ -333,11 +333,11 @@ class NMT(nn.Module):
 
             indices = torch.multinomial(contiuating_hyp_scores_prob, live_hyp_num)
             for index in indices:
-                #print(contiuating_hyp_scores_prob[index])
-                top_cand_hyp_scores.append(contiuating_hyp_scores[index])
+                top_cand_hyp_scores.append(contiuating_hyp_scores[index.item()])
                 top_cand_hyp_pos.append(index)
 
-            top_cand_hyp_scores = torch.tensor(top_cand_hyp_scores, dtype=torch.long, device=self.device)
+            top_cand_hyp_scores = torch.tensor(top_cand_hyp_scores, device=self.device)
+            #top_cand_hyp_scores = F.softmax(top_cand_hyp_scores)
             top_cand_hyp_pos = torch.tensor(top_cand_hyp_pos, dtype=torch.long, device=self.device)
 
             prev_hyp_ids = top_cand_hyp_pos / len(self.vocab.tgt)
@@ -361,10 +361,9 @@ class NMT(nn.Module):
                     decoderStatesForUNKsHere.append(att_t[prev_hyp_id])
 
                 new_hyp_sent = hypotheses[prev_hyp_id] + [hyp_word]
-                if len(new_hyp_sent) > 25:
-                    if "." in hyp_word:
-                        new_hyp_sent += ['</s>']
-                        hyp_word = '</s>'
+                if "." in hyp_word or "?" in hyp_word or "!" in hyp_word:
+                    new_hyp_sent += ['</s>']
+                    hyp_word = '</s>'
                 '''
                 s1 = ""
                 s2 = ""
@@ -381,6 +380,8 @@ class NMT(nn.Module):
                 #new_hyp_sent_copy = [x for x in new_hyp_sent if x != "<s>" and x != "</s>"]
                 #print(s1.join(new_hyp_sent_copy))
                 if hyp_word == '</s>':
+                    print(new_hyp_sent[1:-1])
+                    #print(len(completed_hypotheses))
                     completed_hypotheses.append(Hypothesis(value=new_hyp_sent[1:-1],
                                                            score=cand_new_hyp_score))
                 else:
@@ -412,6 +413,7 @@ class NMT(nn.Module):
                                                    score=hyp_scores[0].item()))
 
         completed_hypotheses.sort(key=lambda hyp: hyp.score, reverse=True)
+        print(len(completed_hypotheses))
         return completed_hypotheses
 
     @property
