@@ -36,8 +36,6 @@ class CharDecoder(nn.Module):
         self.decoderCharEmb = nn.Embedding(len(self.target_vocab.char2id), char_embedding_size, padding_idx=pad_token_idx)
 
         ### END YOUR CODE
-
-
     
     def forward(self, input, dec_hidden=None):
         """ Forward pass of character decoder.

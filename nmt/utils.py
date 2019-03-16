@@ -79,8 +79,6 @@ def pad_sents(sents, pad_token):
 
     return sents_padded
 
-
-
 def read_corpus(file_path, source):
     """ Read file, where each sentence is dilineated by a `\n`.
     @param file_path (str): path to file containing corpus
@@ -97,6 +95,34 @@ def read_corpus(file_path, source):
 
     return data
 
+def read_corpus_nlg(file_path):
+    """ Read file, where each sentence is dilineated by a `\n`.
+    @param file_path (str): path to file containing corpus
+    @param source (str): "tgt" or "src" indicating whether text
+        is of the source language or target language
+    """
+    speakers = []
+    src = []
+    tgt = []
+    prevLine = None
+    for line in open(file_path):
+        if prevLine != None:
+            sent = line.strip().split(' ')
+            speaker = sent[0][:-1]
+            if speaker not in speakers:
+                speakers.append(speaker)
+            # only append <s> and </s> to the target sentence
+            sent = ['<s>'] + sent + ['</s>']
+            tgt.append(sent[1:])
+            src.append(prevLine)
+        else:
+            sent = line.strip().split(' ')
+            speaker = sent[0][:-1]
+            if speaker not in speakers:
+                speakers.append(speaker)
+            prevLine = sent[1:]
+
+    return speakers, src, tgt
 
 def batch_iter(data, batch_size, shuffle=False):
     """ Yield batches of source and target sentences reverse sorted by length (largest to smallest).
