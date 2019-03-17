@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
 from nmt_model import NMT
+import os
 
 class NLG(nn.Module):
     # Natural Language Generation model using a Neural Machine Translation context 
@@ -33,7 +34,7 @@ class NLG(nn.Module):
                 dropout_rate=dropout_rate,
                 vocab=vocab, no_char_decoder=no_char_decoder)
             optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-            self.NMT_speakers.append(speaker)
+            self.NMT_speakers.append(speaker.replace("/", "-").replace(" ","-"))
             self.NMT_models.append(model)
             self.NMT_optimizers.append(optimizer)
             self.lrs.append(lr)
@@ -49,10 +50,13 @@ class NLG(nn.Module):
 
             optimizer.zero_grad()
 
-            loss = -model([source], [target]) # (batch_size,)
+            batch_size = 1
 
-            # need this?
-            #loss.backward()
+            example_losses = -model([source], [target]) # (batch_size,)
+            batch_loss = example_losses.sum()
+            loss = batch_loss / batch_size
+
+            loss.backward()
 
             # clip gradient
             grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), self.clip_grad)
@@ -66,3 +70,52 @@ class NLG(nn.Module):
                 param_group['lr'] = lr
             return batch_loss
         return 0
+
+    def beam_search(self, speaker, src_sent, beam_size=50, max_decoding_time_step=70):
+        i = self.NMT_speakers.index(speaker)
+        model = self.NMT_models[i]
+
+        was_training = model.training
+        model.eval()
+
+        example_hyps = []
+        with torch.no_grad():
+            example_hyps = model.beam_search(src_sent, beam_size=beam_size, max_decoding_time_step=max_decoding_time_step)
+
+        if was_training: model.train(was_training)
+
+        return example_hyps
+
+    '''
+    @staticmethod
+    def load(directory: str, no_char_decoder=False):
+        """ Load the model from a file.
+        @param model_path (str): path to model
+        """
+        args = params['args']
+        model = NMT(vocab=params['vocab'], no_char_decoder=no_char_decoder, **args)
+        model.load_state_dict(params['state_dict'])
+        for filename in os.listdir(directory):
+            NMT_model = NMT.load(directory + "/" + filename, no_char_decoder=no_char_decoder)
+        return model
+
+    def save(self, path: str):
+        """ Save the odel to a file.
+        @param path (str): path to the model
+        """
+        print('save model parameters to [%s]' % path, file=sys.stderr)
+
+        params = {
+            'args': dict(embed_size=self.embed_size,
+                hidden_size=self.hidden_size,
+                dropout_rate=self.dropout_rate,
+                no_char_decoder=self.no_char_decoder),
+            'vocab': self.vocab,
+            'state_dict': self.state_dict()
+        }
+
+        torch.save(params, path)
+
+        for i in range(len(self.NMT_speakers)):
+            self.NMT_models[i].save("models/" + self.NMT_speakers[i] + "_" + path)
+    '''

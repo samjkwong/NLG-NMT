@@ -107,21 +107,26 @@ def read_corpus_nlg(file_path):
     prevLine = None
     for line in open(file_path):
         if prevLine != None:
-            sent = line.strip().split(' ')
-            speaker = sent[0][:-1]
+            sent = line.strip().replace("\n", "").split(' ')
+            i = 0
+            while ":" not in sent[i]:
+                i += 1
+            speaker = sent[i][:-1]
             if speaker not in speakers:
                 speakers.append(speaker)
             # only append <s> and </s> to the target sentence
             sent = ['<s>'] + sent + ['</s>']
-            tgt.append(sent[1:])
+            tgt.append(sent)
             src.append(prevLine)
+            prevLine = sent[1:-1]
         else:
-            sent = line.strip().split(' ')
+            sent = line.strip().replace("\n", "").split(' ')
             speaker = sent[0][:-1]
             if speaker not in speakers:
                 speakers.append(speaker)
-            prevLine = sent[1:]
+            prevLine = sent
 
+    print(speakers)
     return speakers, src, tgt
 
 def batch_iter(data, batch_size, shuffle=False):
