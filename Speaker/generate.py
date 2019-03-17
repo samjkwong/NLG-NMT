@@ -1,10 +1,3 @@
-###############################################################################
-# Language Modeling on Wikitext-2
-#
-# This file generates new sentences sampled from the language model
-#
-###############################################################################
-
 import argparse
 
 import torch
@@ -14,7 +7,7 @@ import data
 parser = argparse.ArgumentParser(description='PyTorch Wikitext-2 Language Model')
 
 # Model parameters.
-parser.add_argument('--data', type=str, default='./data/wikitext-2',
+parser.add_argument('--data', type=str, default='./data',
                     help='location of the data corpus')
 parser.add_argument('--checkpoint', type=str, default='./model.pt',
                     help='model checkpoint to use')
