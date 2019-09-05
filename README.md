@@ -9,3 +9,7 @@ Advances in deep learning and neural networks in recent years have led to impres
 ## Paper
 
 https://github.com/samjkwong/cs224n-final/blob/master/paper.pdf
+
+## Poster
+
+https://github.com/samjkwong/cs224n-final/blob/master/poster.pdf
